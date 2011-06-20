@@ -21,7 +21,6 @@ namespace Castle.MicroKernel.Tests.Registration
 	using Castle.Core;
 	using Castle.MicroKernel.Registration;
 	using Castle.MicroKernel.Tests.ClassComponents;
-	using Castle.Windsor.Tests;
 
 	using CastleTests;
 
@@ -104,7 +103,7 @@ namespace Castle.MicroKernel.Tests.Registration
 		[Test]
 		public void RegisterAssemblyTypes_LookupInterfaceService_RegisteredInContainer()
 		{
-			Kernel.Register(AllTypes.FromAssembly(Assembly.GetExecutingAssembly())
+			Kernel.Register(Classes.FromAssembly(Assembly.GetExecutingAssembly())
 			                	.BasedOn<ICommon>()
 			                	.WithService.FromInterface()
 				);
@@ -196,12 +195,12 @@ namespace Castle.MicroKernel.Tests.Registration
 		[Test]
 		public void RegisterGenericTypes_BasedOnGenericDefinition_RegisteredInContainer()
 		{
-			Kernel.Register(AllTypes.From(typeof(DefaultRepository<>))
+			Kernel.Register(Classes.From(typeof(DefaultRepository<>))
 			                	.Pick()
 			                	.WithService.FirstInterface()
 				);
 
-			var repository = Kernel.Resolve<ClassComponents.IRepository<CustomerImpl>>();
+			var repository = Kernel.Resolve<IRepository<CustomerImpl>>();
 			Assert.IsNotNull(repository);
 		}
 
@@ -341,7 +340,7 @@ namespace Castle.MicroKernel.Tests.Registration
 			Kernel.Register(AllTypes
 			                	.FromAssembly(Assembly.GetExecutingAssembly())
 			                	.BasedOn<ICommon>()
-			                	.Configure(component => component.LifeStyle.Transient)
+			                	.Configure(component => component.LifestyleTransient())
 				);
 
 			foreach (var handler in Kernel.GetAssignableHandlers(typeof(ICommon)))
@@ -353,8 +352,9 @@ namespace Castle.MicroKernel.Tests.Registration
 		[Test]
 		public void RegisterMultipleAssemblyTypes_BasedOn_RegisteredInContainer()
 		{
+#pragma warning disable 0618 //call to obsolete method
 			Kernel.Register(
-				AllTypes.FromAssembly(Assembly.GetExecutingAssembly())
+				Classes.FromThisAssembly()
 					.BasedOn<ICommon>()
 					.BasedOn<ICustomer>()
 					.If(t => t.FullName.Contains("Chain"))
@@ -362,6 +362,7 @@ namespace Castle.MicroKernel.Tests.Registration
 					.BasedOn<DefaultMailSenderService>()
 					.BasedOn<DefaultSpamServiceWithConstructor>()
 				);
+#pragma warning restore
 
 			var handlers = Kernel.GetHandlers(typeof(ICommon));
 			Assert.AreEqual(0, handlers.Length);
@@ -465,7 +466,7 @@ namespace Castle.MicroKernel.Tests.Registration
 			                	.WithService.FirstInterface()
 				);
 
-			var repository = Kernel.Resolve<ClassComponents.IRepository<ICustomer>>();
+			var repository = Kernel.Resolve<IRepository<ICustomer>>();
 			Assert.IsNotNull(repository);
 		}
 

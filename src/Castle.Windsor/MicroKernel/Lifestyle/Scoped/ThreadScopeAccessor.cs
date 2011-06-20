@@ -20,16 +20,16 @@ namespace Castle.MicroKernel.Lifestyle.Scoped
 	public class ThreadScopeAccessor : IScopeAccessor
 	{
 		[ThreadStatic]
-		private static Stack<LifestyleScope> scopes;
+		private static Stack<ScopeCache> scopes;
 
-		public Stack<LifestyleScope> CurrentStack
+		public Stack<ScopeCache> CurrentStack
 		{
 			get
 			{
 				var stack = scopes;
 				if (stack == null)
 				{
-					stack = new Stack<LifestyleScope>();
+					stack = new Stack<ScopeCache>();
 					scopes = stack;
 				}
 				return stack;

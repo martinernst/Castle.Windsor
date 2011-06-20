@@ -16,13 +16,11 @@ namespace Castle.Windsor.Tests.Lifecycle
 {
 	using System;
 
-	using Castle.Components;
 	using Castle.MicroKernel.Registration;
-	using Castle.Windsor.Tests.ClassComponents;
-	using Castle.Windsor.Tests.Components;
 	using Castle.Windsor.Tests.Facilities.TypedFactory.Components;
 
 	using CastleTests;
+	using CastleTests.Components;
 
 	using NUnit.Framework;
 
@@ -85,7 +83,7 @@ namespace Castle.Windsor.Tests.Lifecycle
 		[Test]
 		public void Disposable_services_should_be_disposed_when_released()
 		{
-			DisposableFoo.DisposedCount = 0;
+			DisposableFoo.ResetDisposedCount();
 			Container.Register(Component.For<DisposableFoo>().LifeStyle.Transient);
 
 			var foo = Container.Resolve<DisposableFoo>();
@@ -97,7 +95,7 @@ namespace Castle.Windsor.Tests.Lifecycle
 		[Test]
 		public void Disposable_singleton_dependency_of_transient_open_generic_is_disposed()
 		{
-			DisposableFoo.DisposedCount = 0;
+			DisposableFoo.ResetDisposedCount();
 			Container.Register(
 				Component.For(typeof(GenericComponent<>)).LifeStyle.Transient,
 				Component.For<DisposableFoo>().LifeStyle.Singleton

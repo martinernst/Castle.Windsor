@@ -16,26 +16,21 @@ namespace Castle.MicroKernel.Handlers
 {
 	using System;
 	using System.Collections;
-	using System.Collections.Generic;
 	using System.Diagnostics;
 	using System.Linq;
 
 	using Castle.Core;
+	using Castle.Core.Internal;
+	using Castle.MicroKernel.ComponentActivator;
 	using Castle.MicroKernel.Context;
 	using Castle.MicroKernel.Proxy;
 
-	/// <summary>
-	///   Summary description for DefaultGenericHandler.
-	/// </summary>
-	/// <remarks>
-	///   TODO: Consider refactoring AbstractHandler moving lifestylemanager creation to DefaultHandler
-	/// </remarks>
 	[Serializable]
 	public class DefaultGenericHandler : AbstractHandler
 	{
 		private readonly IGenericImplementationMatchingStrategy implementationMatchingStrategy;
 
-		private readonly IDictionary<Type, IHandler> type2SubHandler = new Dictionary<Type, IHandler>();
+		private readonly SimpleThreadSafeDictionary<Type, IHandler> type2SubHandler = new SimpleThreadSafeDictionary<Type, IHandler>();
 
 		/// <summary>
 		///   Initializes a new instance of the <see cref = "DefaultGenericHandler" /> class.
@@ -54,7 +49,8 @@ namespace Castle.MicroKernel.Handlers
 
 		public override void Dispose()
 		{
-			foreach (var handler in type2SubHandler.Values)
+			var values = type2SubHandler.YieldAllValues();
+			foreach (var handler in values)
 			{
 				var disposable = handler as IDisposable;
 				if (disposable == null)
@@ -63,7 +59,6 @@ namespace Castle.MicroKernel.Handlers
 				}
 				disposable.Dispose();
 			}
-			type2SubHandler.Clear();
 		}
 
 		public override bool ReleaseCore(Burden burden)
@@ -75,37 +70,50 @@ namespace Castle.MicroKernel.Handlers
 			return handler.Release(burden);
 		}
 
+		public override bool Supports(Type service)
+		{
+			if (base.Supports(service))
+			{
+				return true;
+			}
+			if (service.IsGenericType && service.IsGenericTypeDefinition == false)
+			{
+				var openService = service.GetGenericTypeDefinition();
+				return ComponentModel.Services.Any(s => s == openService);
+			}
+			return false;
+		}
+
+		protected virtual IHandler BuildSubHandler(CreationContext context, Type requestedType)
+		{
+			// TODO: we should probably match the requested type to existing services and close them over its generic arguments
+			var newModel = Kernel.ComponentModelBuilder.BuildModel(
+				ComponentModel.ComponentName,
+				new[] { context.RequestedType },
+				requestedType,
+				GetExtendedProperties());
+			CloneParentProperties(newModel);
+			// Create the handler and add to type2SubHandler before we add to the kernel.
+			// Adding to the kernel could satisfy other dependencies and cause this method
+			// to be called again which would result in extra instances being created.
+			return Kernel.AddCustomComponent(newModel, isMetaHandler: true);
+		}
+
 		protected IHandler GetSubHandler(CreationContext context, Type genericType)
 		{
-			IHandler handler;
-			if (type2SubHandler.TryGetValue(genericType, out handler))
+			return type2SubHandler.GetOrAdd(genericType, t => BuildSubHandler(context, t));
+		}
+
+		protected override void InitDependencies()
+		{
+			// not too convinved we need to support that in here but let's be safe...
+			var activator = Kernel.CreateComponentActivator(ComponentModel) as IDependencyAwareActivator;
+			if (activator != null && activator.CanProvideRequiredDependencies(ComponentModel))
 			{
-				return handler;
+				return;
 			}
-			lock (type2SubHandler)
-			{
-				if (type2SubHandler.TryGetValue(genericType, out handler))
-				{
-					return handler;
-				}
-				// TODO: we should probably match the requested type to existing services and close them over its generic arguments
-				var service = context.RequestedType;
-				var newModel = Kernel.ComponentModelFactory.BuildModel(
-					ComponentModel.ComponentName, new[] { service }, genericType, ComponentModel.ExtendedProperties);
 
-				newModel.ExtendedProperties[ComponentModel.SkipRegistration] = true;
-				CloneParentProperties(newModel);
-
-				// Create the handler and add to type2SubHandler before we add to the kernel.
-				// Adding to the kernel could satisfy other dependencies and cause this method
-				// to be called again which would result in extra instances being created.
-				handler = Kernel.HandlerFactory.Create(newModel);
-				type2SubHandler[genericType] = handler;
-
-				Kernel.AddCustomComponent(newModel);
-
-				return handler;
-			}
+			base.InitDependencies();
 		}
 
 		protected override object Resolve(CreationContext context, bool instanceRequired)
@@ -218,6 +226,22 @@ namespace Castle.MicroKernel.Handlers
 				// 3. at this point we should be 99% sure we have arguments that don't satisfy generic constraints of out service.
 				throw new GenericHandlerTypeMismatchException(genericArguments, ComponentModel, this);
 			}
+		}
+
+		private IDictionary GetExtendedProperties()
+		{
+			var extendedProperties = ComponentModel.ExtendedProperties;
+			if (extendedProperties != null && extendedProperties.Count > 0)
+			{
+#if !SILVERLIGHT
+				if (extendedProperties is ICloneable)
+				{
+					extendedProperties = (IDictionary)((ICloneable)extendedProperties).Clone();
+				}
+#endif
+				extendedProperties = new Arguments(extendedProperties);
+			}
+			return extendedProperties;
 		}
 
 		private Type[] GetGenericArguments(CreationContext context)

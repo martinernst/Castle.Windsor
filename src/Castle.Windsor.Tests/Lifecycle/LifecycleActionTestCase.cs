@@ -17,6 +17,7 @@ namespace Castle.Windsor.Tests.Lifecycle
 	using Castle.MicroKernel.Registration;
 
 	using CastleTests;
+	using CastleTests.Components;
 
 	using NUnit.Framework;
 
@@ -70,6 +71,30 @@ namespace Castle.Windsor.Tests.Lifecycle
 
 			service = Container.Resolve<IService2>();
 			Assert.That(service.Name, Is.EqualTo("abab"));
+		}
+
+		[Test]
+		public void Can_mix_vaious_overloads_OnCreate()
+		{
+			Container.Register(Component.For<IService>().ImplementedBy<MyService>()
+			                   	.OnCreate((kernel, instance) => instance.Name += "a")
+			                   	.OnCreate(instance => instance.Name += "b"));
+			var service = Container.Resolve<IService>();
+			Assert.That(service.Name, Is.EqualTo("ba"));
+		}
+
+		[Test]
+		public void Can_mix_vaious_overloads_OnDestroy()
+		{
+			Container.Register(Component.For<IService>().ImplementedBy<MyService>()
+			                   	.LifestyleTransient()
+			                   	.OnDestroy((kernel, instance) => instance.Name += "a")
+			                   	.OnDestroy(instance => instance.Name += "b"));
+			var service = Container.Resolve<IService>();
+			Assert.AreEqual(string.Empty, service.Name);
+
+			Container.Release(service);
+			Assert.AreEqual("ab", service.Name);
 		}
 
 		[Test]

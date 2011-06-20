@@ -23,13 +23,12 @@ namespace Castle.Proxies
 	using Castle.MicroKernel.Tests.ClassComponents;
 	using Castle.ProxyInfrastructure;
 	using Castle.Windsor.Installer;
-	using Castle.Windsor.Tests;
-	using Castle.Windsor.Tests.Components;
 	using Castle.Windsor.Tests.Interceptors;
 #if !SILVERLIGHT
 	using Castle.XmlFiles;
 #endif
 	using CastleTests;
+	using CastleTests.Components;
 
 	using NUnit.Framework;
 

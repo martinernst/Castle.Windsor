@@ -17,16 +17,15 @@ namespace Castle
 	using System;
 	using System.Linq;
 
-	using Castle.Components;
 	using Castle.DynamicProxy;
 	using Castle.MicroKernel.Registration;
 	using Castle.MicroKernel.Tests.ClassComponents;
 	using Castle.Windsor.Tests;
 	using Castle.Windsor.Tests.ClassComponents;
-	using Castle.Windsor.Tests.Components;
 	using Castle.Windsor.Tests.Interceptors;
 
 	using CastleTests;
+	using CastleTests.Components;
 
 	using NUnit.Framework;
 
@@ -148,7 +147,7 @@ namespace Castle
 
 			var handler = Kernel.GetHandler(typeof(A));
 
-			Assert.AreEqual(typeof(A), handler.Services.Single());
+			Assert.AreEqual(typeof(A), handler.ComponentModel.Services.Single());
 			Assert.AreEqual(typeof(A2), handler.ComponentModel.Implementation);
 			// sure, why not - let them do uncompatible types. Who knows - perhaps by some miracle
 			Assert.Throws<InvalidCastException>(() => Container.Resolve<A>());
@@ -183,7 +182,7 @@ namespace Castle
 
 			var handler = Kernel.GetHandler(typeof(A));
 
-			Assert.AreEqual(typeof(A), handler.Services.Single());
+			Assert.AreEqual(typeof(A), handler.ComponentModel.Services.Single());
 			Assert.AreEqual(typeof(A), handler.ComponentModel.Implementation);
 		}
 
@@ -194,7 +193,7 @@ namespace Castle
 
 			var handler = Kernel.GetHandler(typeof(A));
 
-			Assert.AreEqual(typeof(A), handler.Services.Single());
+			Assert.AreEqual(typeof(A), handler.ComponentModel.Services.Single());
 			Assert.AreEqual(typeof(A), handler.ComponentModel.Implementation);
 		}
 	}

@@ -22,9 +22,9 @@ namespace Castle
 	using Castle.MicroKernel.Registration;
 	using Castle.MicroKernel.Tests.ClassComponents;
 	using Castle.Windsor.Tests;
-	using Castle.Windsor.Tests.Components;
 
 	using CastleTests;
+	using CastleTests.Components;
 
 	using NUnit.Framework;
 
@@ -62,7 +62,7 @@ namespace Castle
 			                                                Container.Resolve<Generics.IRepository<A>>());
 
 			var message =
-				@"Requested type Castle.Generics.IRepository`1[Castle.Windsor.Tests.A] has 1 generic parameter(s), whereas component implementation type Castle.Generics.DoubleGenericRepository`2[T1,T2] requires 2. This means that Windsor does not have enough information to properly create that component for you. This is most likely a bug in your registration code.";
+				@"Requested type Castle.Generics.IRepository`1[CastleTests.Components.A] has 1 generic parameter(s), whereas component implementation type Castle.Generics.DoubleGenericRepository`2[T1,T2] requires 2. This means that Windsor does not have enough information to properly create that component for you. This is most likely a bug in your registration code.";
 			Assert.AreEqual(message, exception.Message);
 		}
 
@@ -76,7 +76,7 @@ namespace Castle
 			                                                Container.Resolve<Generics.IRepository<A>>());
 
 			var message =
-				@"Requested type Castle.Generics.IRepository`1[Castle.Windsor.Tests.A] has 1 generic parameter(s), whereas component implementation type Castle.Generics.DoubleGenericRepository`2[T1,T2] requires 2. This means that Windsor does not have enough information to properly create that component for you. This is most likely a bug in your registration code.";
+				@"Requested type Castle.Generics.IRepository`1[CastleTests.Components.A] has 1 generic parameter(s), whereas component implementation type Castle.Generics.DoubleGenericRepository`2[T1,T2] requires 2. This means that Windsor does not have enough information to properly create that component for you. This is most likely a bug in your registration code.";
 			Assert.AreEqual(message, exception.Message);
 		}
 
@@ -104,7 +104,7 @@ namespace Castle
 			                                                Container.Resolve<MicroKernel.Tests.ClassComponents.IRepository<string>>());
 
 			var message =
-				@"Types System.String, Castle.Windsor.Tests.Components.IEmployee don't satisfy generic constraints of implementation type Castle.MicroKernel.Tests.ClassComponents.DoubleRepository`2 of component 'Castle.MicroKernel.Tests.ClassComponents.DoubleRepository`2'.this is likely a bug in the IGenericImplementationMatchingStrategy used (Castle.StubGenericImplementationMatchingStrategy)";
+				@"Types System.String, CastleTests.Components.IEmployee don't satisfy generic constraints of implementation type Castle.MicroKernel.Tests.ClassComponents.DoubleRepository`2 of component 'Castle.MicroKernel.Tests.ClassComponents.DoubleRepository`2'.this is likely a bug in the IGenericImplementationMatchingStrategy used (Castle.StubGenericImplementationMatchingStrategy)";
 			Assert.AreEqual(message, exception.Message);
 		}
 	}

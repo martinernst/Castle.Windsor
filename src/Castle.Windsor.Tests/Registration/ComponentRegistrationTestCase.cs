@@ -26,16 +26,13 @@ namespace Castle.MicroKernel.Tests.Registration
 	using Castle.MicroKernel.Registration;
 	using Castle.MicroKernel.Tests.ClassComponents;
 	using Castle.MicroKernel.Tests.Configuration.Components;
-	using Castle.MicroKernel.Tests.Lifestyle.Components;
-	using Castle.Windsor.Tests;
 	using Castle.Windsor.Tests.Facilities.Startable.Components;
 	using Castle.Windsor.Tests.Interceptors;
 
 	using CastleTests;
+	using CastleTests.Components;
 
 	using NUnit.Framework;
-
-	using Child = Castle.MicroKernel.Registration.Child;
 
 	public class ComponentRegistrationTestCase : AbstractContainerTestCase
 	{
@@ -54,7 +51,7 @@ namespace Castle.MicroKernel.Tests.Registration
 				Component.For<CustomerImpl>());
 
 			var handler = Kernel.GetHandler(typeof(CustomerImpl));
-			Assert.AreEqual(typeof(CustomerImpl), handler.Services.Single());
+			Assert.AreEqual(typeof(CustomerImpl), handler.ComponentModel.Services.Single());
 			Assert.AreEqual(typeof(CustomerImpl), handler.ComponentModel.Implementation);
 
 			var customer = Kernel.Resolve<CustomerImpl>();
@@ -105,7 +102,7 @@ namespace Castle.MicroKernel.Tests.Registration
 
 			var handler = Kernel.GetHandler("customer");
 			Assert.AreEqual("customer", handler.ComponentModel.Name);
-			Assert.AreEqual(typeof(CustomerImpl), handler.Services.Single());
+			Assert.AreEqual(typeof(CustomerImpl), handler.ComponentModel.Services.Single());
 			Assert.AreEqual(typeof(CustomerImpl), handler.ComponentModel.Implementation);
 
 			var customer = Kernel.Resolve<CustomerImpl>("customer");
@@ -441,9 +438,9 @@ namespace Castle.MicroKernel.Tests.Registration
 					.Named("common2")
 					.ImplementedBy<CommonImpl2>(),
 				Component.For<ClassWithArrayConstructor>()
-					.Parameters(
+					.DependsOn(
 						Parameter.ForKey("first").Eq("${common2}"),
-						Parameter.ForKey("services").Eq(list)
+						Dependency.OnConfigValue("services", list)
 					)
 				);
 
@@ -472,7 +469,7 @@ namespace Castle.MicroKernel.Tests.Registration
 					.Named("common2")
 					.ImplementedBy<CommonImpl2>(),
 				Component.For<ClassWithListConstructor>()
-					.Parameters(
+					.DependsOn(
 						Parameter.ForKey("services").Eq(list)
 					)
 				);
@@ -515,7 +512,7 @@ namespace Castle.MicroKernel.Tests.Registration
 		{
 			Kernel.Register(Component.For(typeof(IGenericClassWithParameter<>))
 			                	.ImplementedBy(typeof(GenericClassWithParameter<>))
-			                	.Parameters(Parameter.ForKey("name").Eq("NewName"))
+			                	.DependsOn(Parameter.ForKey("name").Eq("NewName"))
 				);
 
 			var instance = Kernel.Resolve<IGenericClassWithParameter<int>>();

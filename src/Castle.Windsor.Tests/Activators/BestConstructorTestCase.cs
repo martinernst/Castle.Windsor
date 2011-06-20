@@ -26,6 +26,8 @@ namespace CastleTests.Activators
 	using Castle.MicroKernel.Tests.Configuration.Components;
 	using Castle.Windsor.Tests;
 
+	using CastleTests.Components;
+
 	using NUnit.Framework;
 
 	[TestFixture]
@@ -194,9 +196,9 @@ namespace CastleTests.Activators
 			Container.Register(Component.For<ICommon>().ImplementedBy<CommonImpl1>().Named("Mucha"),
 			                   Component.For<ICustomer>().ImplementedBy<CustomerImpl>().Named("Stefan"),
 			                   Component.For<HasTwoConstructors>().Named("first")
-			                   	.ServiceOverrides(ServiceOverride.ForKey("customer").Eq("Stefan")),
+			                   	.DependsOn(ServiceOverride.ForKey("customer").Eq("Stefan")),
 			                   Component.For<HasTwoConstructors>().Named("second")
-			                   	.ServiceOverrides(ServiceOverride.ForKey("common").Eq("Mucha")));
+			                   	.DependsOn(ServiceOverride.ForKey("common").Eq("Mucha")));
 
 			var first = Container.Resolve<HasTwoConstructors>("first");
 			var second = Container.Resolve<HasTwoConstructors>("second");
@@ -224,7 +226,7 @@ namespace CastleTests.Activators
 		{
 			Container.Register(Component.For<ICommon>().ImplementedBy<CommonImpl1>(),
 			                   Component.For<HasTwoConstructors2>()
-			                   	.Parameters(Parameter.ForKey("param").Eq("foo")));
+			                   	.DependsOn(Parameter.ForKey("param").Eq("foo")));
 
 			var component = Container.Resolve<HasTwoConstructors2>();
 

@@ -15,7 +15,6 @@
 namespace Castle.MicroKernel
 {
 	using System;
-	using System.ComponentModel;
 
 	using Castle.Core.Internal;
 	using Castle.MicroKernel.Registration;
@@ -37,9 +36,9 @@ namespace Castle.MicroKernel
 	public partial interface IKernel : IKernelEvents, IDisposable
 	{
 		/// <summary>
-		///   Returns the implementation of <see cref = "IComponentModelFactory" />
+		///   Returns the implementation of <see cref = "IComponentModelBuilder" />
 		/// </summary>
-		IComponentModelFactory ComponentModelFactory { get; }
+		IComponentModelBuilder ComponentModelBuilder { get; }
 
 		/// <summary>
 		///   Gets or sets the implementation of <see cref = "IConfigurationStore" />
@@ -86,39 +85,9 @@ namespace Castle.MicroKernel
 		/// <summary>
 		///   Adds a <see cref = "IFacility" /> to the kernel.
 		/// </summary>
-		/// <param name = "key"></param>
-		/// <param name = "facility"></param>
-		/// <returns></returns>
-		[Obsolete("Use AddFacility(IFacility) instead.")]
-		[EditorBrowsable(EditorBrowsableState.Never)]
-		IKernel AddFacility(String key, IFacility facility);
-
-		/// <summary>
-		///   Adds a <see cref = "IFacility" /> to the kernel.
-		/// </summary>
 		/// <param name = "facility"></param>
 		/// <returns></returns>
 		IKernel AddFacility(IFacility facility);
-
-		/// <summary>
-		///   Creates and adds an <see cref = "IFacility" /> facility to the kernel.
-		/// </summary>
-		/// <typeparam name = "T">The facility type.</typeparam>
-		/// <param name = "key"></param>
-		[Obsolete("Use AddFacility<TFacility>() instead.")]
-		[EditorBrowsable(EditorBrowsableState.Never)]
-		IKernel AddFacility<T>(String key) where T : IFacility, new();
-
-		/// <summary>
-		///   Creates and adds an <see cref = "IFacility" /> facility to the kernel.
-		/// </summary>
-		/// <typeparam name = "T">The facility type.</typeparam>
-		/// <param name = "key"></param>
-		/// <param name = "onCreate">The callback for creation.</param>
-		[Obsolete("Use AddFacility<TFacility>(Action<TFacility>) instead.")]
-		[EditorBrowsable(EditorBrowsableState.Never)]
-		IKernel AddFacility<T>(String key, Action<T> onCreate)
-			where T : IFacility, new();
 
 		/// <summary>
 		///   Creates and adds an <see cref = "IFacility" /> facility to the kernel.
@@ -138,15 +107,15 @@ namespace Castle.MicroKernel
 
 		/// <summary>
 		///   Register a new component resolver that can take part in the decision
-		///   making about which handler(s) to resolve and in which order
-		/// </summary>
-		void AddHandlersFilter(IHandlersFilter filter);
-
-		/// <summary>
-		///   Register a new component resolver that can take part in the decision
 		///   making about which handler to resolve
 		/// </summary>
 		void AddHandlerSelector(IHandlerSelector selector);
+
+		/// <summary>
+		///   Register a new component resolver that can take part in the decision
+		///   making about which handler(s) to resolve and in which order
+		/// </summary>
+		void AddHandlersFilter(IHandlersFilter filter);
 
 		/// <summary>
 		///   Adds (or replaces) an <see cref = "ISubSystem" />
@@ -218,17 +187,23 @@ namespace Castle.MicroKernel
 		bool HasComponent(Type service);
 
 		/// <summary>
-		///   Registers the components provided by the <see cref = "IRegistration" />s
-		///   with the <see cref = "IKernel" />.
-		///   <para />
-		///   Create a new registration using <see cref = "Registration.Component" />.For() or <see cref = "AllTypes" />.
+		///   Registers the components with the <see cref = "IKernel" />. The instances of <see cref = "IRegistration" /> are produced by fluent registration API.
+		///   Most common entry points are <see cref = "Component.For{TService}" /> method to register a single type or (recommended in most cases) 
+		///   <see cref = "AllTypes.FromThisAssembly" />.
+		///   Let the Intellisense drive you through the fluent API past those entry points. For details see the documentation at http://j.mp/WindsorApi
 		/// </summary>
 		/// <example>
 		///   <code>
-		///     kernel.Register(Component.For&lt;IService&gt;().ImplementedBy&lt;DefaultService&gt;());
+		///     kernel.Register(Component.For&lt;IService&gt;().ImplementedBy&lt;DefaultService&gt;().LifestyleTransient());
 		///   </code>
 		/// </example>
-		/// <param name = "registrations">The component registrations.</param>
+		/// <example>
+		///   <code>
+		///     kernel.Register(Classes.FromThisAssembly().BasedOn&lt;IService&gt;().WithServiceDefaultInterfaces().Configure(c => c.LifestyleTransient()));
+		///   </code>
+		/// </example>
+		/// <param name = "registrations">The component registrations created by <see cref = "Component.For{TService}" />, <see
+		///    cref = "AllTypes.FromThisAssembly" /> or different entry method to the fluent API.</param>
 		/// <returns>The kernel.</returns>
 		IKernel Register(params IRegistration[] registrations);
 

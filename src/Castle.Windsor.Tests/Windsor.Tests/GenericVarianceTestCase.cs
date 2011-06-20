@@ -15,9 +15,9 @@
 namespace CastleTests.Windsor.Tests
 {
 	using Castle.MicroKernel.Registration;
-	using Castle.Windsor.Tests.Components;
 
 	using CastleTests;
+	using CastleTests.Components;
 
 	using NUnit.Framework;
 

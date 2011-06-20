@@ -1,4 +1,48 @@
 ================================================================================================
+change - Removed overloads of Configure and ConfigureFor<> methods of the fluent registration
+	API that had ConfigureDelegate parameter
+
+impact - high
+fixability - easy
+
+description - This change was made to simplify the API and remove ambiguity in cases where a 
+	private method is used to provide the configuration.
+
+fix - This change breaks scenarios where a property was being used as the last element of the
+	chain in the nested deledate, like:
+	Configure(c => c.LifeStyle.Transient)
+	This code will no longer compile. To fix it switch to the new methods exposing lifestyle:
+	Configure(c => c.LifestyleTransient()) or simply::
+	LifestyleTransient()
+================================================================================================
+change - ITypedFactoryComponentResolver interface was removed and ITypedFactoryComponentSelector
+	now returns Func<IKernelInternal, IReleasePolicy, object> from SelectComponent method
+
+impact - low
+fixability - easy
+
+description - This change was made to simplify coding of advanced custom selectors which means
+	now only one type needs to be created instead of two and change is much more localized.
+
+fix - If you were using DefaultTypedFactoryComponentSelector this change does not affect you.
+	otherwise return delegate pointing to Resolve method of your ITypedFactoryComponentResolver
+	class or inline it altogether.
+================================================================================================
+change - Add() methods on PropertySetCollection and ConstructorCandidateCollection are no longer
+	publicly accessible
+
+impact - low
+fixability - easy
+
+description - This change was made to ensure and encapsulate the fact that as constructor or
+	property dependency is added the dependency is also added to Dependencies collection on
+	ComponentModel.
+
+fix - Use new AddProperty or AddConstructor methods respectively.
+================================================================================================
+rename -  WithService.DefaultInterface() -> WithService.DefaultInterfaces()
+description - changed to plural to emphasize more than one interface may be matched.
+================================================================================================
 change - ResolveAll methods have now different bahaviour.
 
 impact - high
@@ -118,11 +162,6 @@ description - To simplify internal structure of fluent registration API and brin
 
 fix - If you really need this overload you can create custom IRegistration that exposes this
 	functionality. Or better rethink why you need it in the first place.
-================================================================================================
-rename - IComponentModelBuilder -> IComponentModelFactory
-	IKernel.ComponentModelBuilder -> IKernel.ComponentModelFactory
-description - Unifying naming with IHandlerFactory, making place for ComponentModelBuilder class
-	which is a different concept.
 ================================================================================================
 change - Adding more than a single facility of any given type is not legal anymore
 

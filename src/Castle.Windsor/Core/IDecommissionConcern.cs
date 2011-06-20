@@ -1,4 +1,4 @@
-﻿// Copyright 2004-2010 Castle Project - http://www.castleproject.org/
+﻿// Copyright 2004-2011 Castle Project - http://www.castleproject.org/
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,6 +14,10 @@
 
 namespace Castle.Core
 {
+
+	/// <summary>
+	/// Marks a <see cref="ILifecycleConcern"/> which is applied right before component instance is destroyed.
+	/// </summary>
 	public interface IDecommissionConcern : ILifecycleConcern
 	{
 	}

@@ -15,12 +15,10 @@
 namespace Castle.MicroKernel.ModelBuilder.Inspectors
 {
 	using System;
-#if SILVERLIGHT
-	using System.Linq;
-#endif
 	using System.Reflection;
 
 	using Castle.Core;
+	using Castle.Core.Internal;
 
 	/// <summary>
 	///   This implementation of <see cref = "IContributeComponentModelConstruction" />
@@ -41,18 +39,14 @@ namespace Castle.MicroKernel.ModelBuilder.Inspectors
 				// We register each public constructor
 				// and let the ComponentFactory select an 
 				// eligible amongst the candidates later
-				model.Constructors.Add(CreateConstructorCandidate(model, constructor));
+				model.AddConstructor(CreateConstructorCandidate(model, constructor));
 			}
 		}
 
 		protected virtual ConstructorCandidate CreateConstructorCandidate(ComponentModel model, ConstructorInfo constructor)
 		{
 			var parameters = constructor.GetParameters();
-#if SILVERLIGHT
-			var dependencies = parameters.Select(BuildParameterDependency).ToArray();
-#else
-			var dependencies = Array.ConvertAll(parameters, BuildParameterDependency);
-#endif
+			var dependencies = parameters.ConvertAll(BuildParameterDependency);
 			return new ConstructorCandidate(constructor, dependencies);
 		}
 

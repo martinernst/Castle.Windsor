@@ -19,8 +19,9 @@ namespace Castle.Windsor.Tests
 	using Castle.MicroKernel.ComponentActivator;
 	using Castle.MicroKernel.Registration;
 	using Castle.Windsor.Tests.ClassComponents;
-	using Castle.Windsor.Tests.Components;
 	using Castle.Windsor.Tests.Interceptors;
+
+	using CastleTests.Components;
 
 	using NUnit.Framework;
 
@@ -65,7 +66,7 @@ namespace Castle.Windsor.Tests
 		[Test]
 		public void When_interceptor_throws_previous_dependencies_get_released()
 		{
-			DisposableFoo.DisposedCount = 0;
+			DisposableFoo.ResetDisposedCount();
 			container.Register(
 				Component.For<ThrowInCtorInterceptor>().LifeStyle.Transient,
 				Component.For<DisposableFoo>().LifeStyle.Transient,

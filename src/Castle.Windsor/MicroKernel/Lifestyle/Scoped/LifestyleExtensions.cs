@@ -16,9 +16,6 @@ namespace Castle.MicroKernel.Lifestyle.Scoped
 {
 	using System;
 
-	using Castle.MicroKernel;
-	using Castle.MicroKernel.Registration;
-	using Castle.MicroKernel.Registration.Lifestyle;
 	using Castle.Windsor;
 
 	public static class LifestyleExtensions
@@ -41,11 +38,6 @@ namespace Castle.MicroKernel.Lifestyle.Scoped
 		public static IDisposable RequireScope(this IWindsorContainer container)
 		{
 			return RequireScope(container.Kernel);
-		}
-
-		public static ComponentRegistration<T> Scoped<T>(this LifestyleGroup<T> @group) where T : class
-		{
-			return group.Custom<ScopedLifestyleManager>();
 		}
 
 		private static IScopeManager GetScopeSubSystem(IKernel kernel)

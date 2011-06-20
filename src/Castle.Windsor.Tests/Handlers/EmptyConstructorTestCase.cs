@@ -18,9 +18,9 @@ namespace Castle.Windsor.Tests.Handlers
 	using Castle.MicroKernel;
 	using Castle.MicroKernel.ModelBuilder;
 	using Castle.MicroKernel.Registration;
-	using Castle.Windsor.Tests.ClassComponents;
 
 	using CastleTests;
+	using CastleTests.Components;
 
 	using NUnit.Framework;
 

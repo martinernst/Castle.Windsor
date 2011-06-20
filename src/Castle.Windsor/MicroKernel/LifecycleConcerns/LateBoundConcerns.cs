@@ -18,9 +18,9 @@ namespace Castle.MicroKernel.LifecycleConcerns
 	using System.Collections.Generic;
 
 	using Castle.Core;
+
 #if DOTNET40
 	using System.Collections.Concurrent;
-
 #else
 	using Castle.Core.Internal;
 #endif

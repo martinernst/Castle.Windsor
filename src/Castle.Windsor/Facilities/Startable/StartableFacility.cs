@@ -73,18 +73,10 @@ namespace Castle.Facilities.Startable
 		protected override void Init()
 		{
 			converter = Kernel.GetConversionManager();
-			Kernel.ComponentModelFactory.AddContributor(new StartableContributor(converter));
+			Kernel.ComponentModelBuilder.AddContributor(new StartableContributor(converter));
 			if (optimizeForSingleInstall)
 			{
-				var hack = Kernel as IKernelEventsInternal;
-				if (hack != null)
-				{
-					hack.RegistrationCompleted += StartAllInternal;
-				}
-				else
-				{
-					Kernel.HandlersChanged += StartAll;
-				}
+				Kernel.RegistrationCompleted += StartAll;
 				Kernel.ComponentRegistered += CacheForStart;
 				return;
 			}
@@ -145,22 +137,12 @@ namespace Castle.Facilities.Startable
 			CheckWaitingList();
 		}
 
-		private void OnHandlerStateChanged(object source, EventArgs args)
-		{
-			CheckWaitingList();
-		}
-
 		private void Start(IHandler handler)
 		{
 			handler.Resolve(CreationContext.CreateEmpty());
 		}
 
-		private void StartAll(ref bool statechanged)
-		{
-			StartAllInternal(null, null);
-		}
-
-		private void StartAllInternal(object sender, EventArgs e)
+		private void StartAll(object sender, EventArgs e)
 		{
 			var array = waitList.ToArray();
 			waitList.Clear();

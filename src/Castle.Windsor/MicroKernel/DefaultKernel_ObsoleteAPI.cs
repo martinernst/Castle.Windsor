@@ -93,7 +93,7 @@ namespace Castle.MicroKernel
 			{
 				throw new ArgumentException("The specified lifestyle must be Thread, Transient, or Singleton.", "lifestyle");
 			}
-			var model = ComponentModelFactory.BuildModel(new ComponentName(key, true), new[] { serviceType }, classType, null);
+			var model = ComponentModelBuilder.BuildModel(new ComponentName(key, true), new[] { serviceType }, classType, null);
 
 			if (overwriteLifestyle || LifestyleType.Undefined == model.LifestyleType)
 			{
@@ -138,7 +138,8 @@ namespace Castle.MicroKernel
 			AddComponent(classType.FullName, serviceType, classType);
 		}
 
-		[Obsolete("Use Register(Component.For(serviceType).ImplementedBy<T>()) or generic version instead.")]
+		[Obsolete(
+			"Use Register(Component.For(serviceType).ImplementedBy<T>().Lifestyle.Is(lifestyle)) or generic version instead.")]
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		public void AddComponent<T>(Type serviceType, LifestyleType lifestyle)
 		{
@@ -226,7 +227,8 @@ namespace Castle.MicroKernel
 			AddComponentInstance(serviceType.FullName, serviceType, instance);
 		}
 
-		[Obsolete("Use Register(Component.For<T>().Instance(instance)) instead.")]
+		[Obsolete("Use Register(Component.For(serviceType).ImplementedBy<T>().Instance(instance)) or generic version instead."
+			)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		public void AddComponentInstance<T>(Type serviceType, object instance)
 		{
@@ -251,7 +253,7 @@ namespace Castle.MicroKernel
 				throw new ArgumentNullException("classType");
 			}
 
-			var model = ComponentModelFactory.BuildModel(new ComponentName(key, true), new[] { classType }, classType, extendedProperties);
+			var model = ComponentModelBuilder.BuildModel(new ComponentName(key, true), new[] { classType }, classType, extendedProperties);
 			RaiseComponentModelCreated(model);
 			var handler = HandlerFactory.Create(model);
 			RegisterHandler(key, handler);
@@ -278,10 +280,60 @@ namespace Castle.MicroKernel
 				throw new ArgumentNullException("classType");
 			}
 
-			var model = ComponentModelFactory.BuildModel(new ComponentName(key, true), new[] { serviceType }, classType, extendedProperties);
+			var model = ComponentModelBuilder.BuildModel(new ComponentName(key, true), new[] { serviceType }, classType, extendedProperties);
 			RaiseComponentModelCreated(model);
 			var handler = HandlerFactory.Create(model);
 			RegisterHandler(key, handler);
+		}
+
+		[Obsolete("Use AddFacility(IFacility) instead.")]
+		[EditorBrowsable(EditorBrowsableState.Never)]
+		public virtual IKernel AddFacility(String key, IFacility facility)
+		{
+			return AddFacility(facility);
+		}
+
+		[Obsolete("Use AddFacility<TFacility>() instead.")]
+		[EditorBrowsable(EditorBrowsableState.Never)]
+		public IKernel AddFacility<T>(String key) where T : IFacility, new()
+		{
+			return AddFacility(new T());
+		}
+
+		[Obsolete("Use AddFacility<TFacility>(Action<TFacility>) instead.")]
+		[EditorBrowsable(EditorBrowsableState.Never)]
+		public IKernel AddFacility<T>(String key, Action<T> onCreate)
+			where T : IFacility, new()
+		{
+			return AddFacility(onCreate);
+		}
+
+		/// <summary>
+		///   Returns the component instance by the component key
+		///   using dynamic arguments
+		/// </summary>
+		/// <param name = "key"></param>
+		/// <param name = "arguments"></param>
+		/// <returns></returns>
+		[Obsolete("Use Resolve<object>(key, arguments) instead")]
+		[EditorBrowsable(EditorBrowsableState.Never)]
+		public object Resolve(string key, IDictionary arguments)
+		{
+			return (this as IKernelInternal).Resolve(key, service: null, arguments: arguments, policy: ReleasePolicy);
+		}
+
+		/// <summary>
+		///   Returns the component instance by the component key
+		///   using dynamic arguments
+		/// </summary>
+		/// <param name = "key"></param>
+		/// <param name = "argumentsAsAnonymousType"></param>
+		/// <returns></returns>
+		[Obsolete("Use Resolve<object>(key, argumentsAsAnonymousType) instead")]
+		[EditorBrowsable(EditorBrowsableState.Never)]
+		public object Resolve(string key, object argumentsAsAnonymousType)
+		{
+			return (this as IKernelInternal).Resolve(key, null, new ReflectionBasedDictionaryAdapter(argumentsAsAnonymousType), ReleasePolicy);
 		}
 	}
 }

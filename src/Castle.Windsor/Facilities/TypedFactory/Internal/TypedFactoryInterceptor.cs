@@ -15,9 +15,6 @@
 namespace Castle.Facilities.TypedFactory.Internal
 {
 	using System;
-#if SILVERLIGHT
-	using System.Linq;
-#endif
 	using System.Collections.Generic;
 	using System.Reflection;
 
@@ -26,6 +23,10 @@ namespace Castle.Facilities.TypedFactory.Internal
 	using Castle.DynamicProxy;
 	using Castle.MicroKernel;
 	using Castle.MicroKernel.Facilities;
+
+#if SILVERLIGHT
+	using System.Linq;
+#endif
 
 	[Transient]
 	public class TypedFactoryInterceptor : IInterceptor, IOnBehalfAware, IDisposable
@@ -108,7 +109,7 @@ namespace Castle.Facilities.TypedFactory.Internal
 						ComponentSelector,
 						invocation.Method));
 			}
-			invocation.ReturnValue = component.Resolve(kernel, scope);
+			invocation.ReturnValue = component(kernel, scope);
 		}
 
 		private bool TryGetMethod(IInvocation invocation, out FactoryMethod method)

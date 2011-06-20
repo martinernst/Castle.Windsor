@@ -14,66 +14,33 @@
 
 namespace Castle.MicroKernel.Lifestyle.Scoped
 {
-	using System;
-
-	using Castle.Core;
 	using Castle.MicroKernel.Context;
 
 	public class ScopedLifestyleManager : AbstractLifestyleManager
 	{
-		private IScopeManager manager;
+		private readonly ICurrentScopeAccessor accessor;
+
+		public ScopedLifestyleManager(ICurrentScopeAccessor accessor)
+		{
+			this.accessor = accessor;
+		}
 
 		public override void Dispose()
 		{
-			var current = GetCurrentScope();
-			if (current == null)
-			{
-				return;
-			}
-
-			var instance = current.GetComponentBurden(this);
-			if (instance == null)
-			{
-				return;
-			}
-			instance.Release();
-		}
-
-		public override void Init(IComponentActivator componentActivator, IKernel kernel, ComponentModel model)
-		{
-			base.Init(componentActivator, kernel, model);
-
-			manager = kernel.GetSubSystem("scope") as IScopeManager;
-			if (manager == null)
-			{
-				throw new InvalidOperationException("Scope Subsystem not found.  Did you forget to add it?");
-			}
 		}
 
 		public override object Resolve(CreationContext context, IReleasePolicy releasePolicy)
 		{
-			var scope = GetCurrentScope();
-			if (scope == null)
+			var scope = accessor.GetScopeCache(context);
+			var burden = scope[this];
+			if (burden != null)
 			{
-				throw new ComponentResolutionException(
-					string.Format(
-						"Component '{0}' has scoped lifestyle, and it could not be resolved because no scope is accessible.  Did you forget to call container.BeginScope()?",
-						Model.Name), Model);
+				return burden.Instance;
 			}
-			var cachedBurden = scope.GetComponentBurden(this);
-			if (cachedBurden != null)
-			{
-				return cachedBurden.Instance;
-			}
-			var burden = base.CreateInstance(context, trackedExternally: true);
-			scope.AddComponent(this, burden);
+			burden = base.CreateInstance(context, trackedExternally: true);
+			scope[this] = burden;
 			Track(burden, releasePolicy);
 			return burden.Instance;
-		}
-
-		private LifestyleScope GetCurrentScope()
-		{
-			return manager.CurrentScope;
 		}
 	}
 }

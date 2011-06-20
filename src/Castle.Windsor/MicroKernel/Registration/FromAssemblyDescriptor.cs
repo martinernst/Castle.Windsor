@@ -1,4 +1,4 @@
-﻿// Copyright 2004-2010 Castle Project - http://www.castleproject.org/
+﻿// Copyright 2004-2011 Castle Project - http://www.castleproject.org/
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,25 +18,32 @@ namespace Castle.MicroKernel.Registration
 	using System.Collections.Generic;
 	using System.Linq;
 	using System.Reflection;
-	
+
 	/// <summary>
-	/// Selects a set of types from an assembly.
+	///   Selects a set of types from an assembly.
 	/// </summary>
 	public class FromAssemblyDescriptor : FromDescriptor
 	{
 		private readonly IEnumerable<Assembly> assemblies;
 		private bool nonPublicTypes;
 
-		internal FromAssemblyDescriptor(Assembly assembly)
+		internal FromAssemblyDescriptor(Assembly assembly, Predicate<Type> additionalFilters) : base(additionalFilters)
 		{
 			assemblies = new[] { assembly };
 		}
 
-		internal FromAssemblyDescriptor(IEnumerable<Assembly> assemblies)
+		internal FromAssemblyDescriptor(IEnumerable<Assembly> assemblies, Predicate<Type> additionalFilters)
+			: base(additionalFilters)
 		{
 			this.assemblies = assemblies;
 		}
 
+		/// <summary>
+		///   When called also non-public types will be scanned.
+		/// </summary>
+		/// <remarks>
+		///   Usually it is not recommended to register non-public types in the container so think twice before using this option.
+		/// </remarks>
 		public FromAssemblyDescriptor IncludeNonPublicTypes()
 		{
 			nonPublicTypes = true;
@@ -47,16 +54,10 @@ namespace Castle.MicroKernel.Registration
 		{
 			if (nonPublicTypes)
 			{
-				foreach (var type in assemblies.SelectMany(assembly => assembly.GetTypes()))
-				{
-					yield return type;
-				}
+				return assemblies.SelectMany(assembly => assembly.GetTypes());
 			}
 
-			foreach (var type in assemblies.SelectMany(assembly => assembly.GetExportedTypes()))
-			{
-				yield return type;
-			}
+			return assemblies.SelectMany(assembly => assembly.GetExportedTypes());
 		}
 	}
 }

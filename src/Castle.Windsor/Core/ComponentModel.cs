@@ -33,7 +33,6 @@ namespace Castle.Core
 	public sealed class ComponentModel : GraphNode
 	{
 		public const string GenericImplementationMatchingStrategy = "generic.matching";
-		public const string SkipRegistration = "skip.registration";
 
 		[DebuggerBrowsable(DebuggerBrowsableState.Never)]
 		private readonly ConstructorCandidateCollection constructors = new ConstructorCandidateCollection();
@@ -84,9 +83,10 @@ namespace Castle.Core
 		/// </summary>
 		public ComponentModel(ComponentName name, ICollection<Type> services, Type implementation, IDictionary extendedProperties)
 		{
-			componentName = name;
-			Implementation = implementation;
+			componentName = Must.NotBeNull(name, "name");
+			Implementation = Must.NotBeNull(implementation, "implementation");
 			this.extendedProperties = extendedProperties;
+			services = Must.NotBeEmpty(services, "services");
 			foreach (var type in services)
 			{
 				AddService(type);
@@ -100,7 +100,7 @@ namespace Castle.Core
 		public ComponentName ComponentName
 		{
 			get { return componentName; }
-			internal set { componentName = value; }
+			internal set { componentName = Must.NotBeNull(value, "value"); }
 		}
 
 		/// <summary>
@@ -265,7 +265,8 @@ namespace Castle.Core
 		///   Gets the lifecycle steps.
 		/// </summary>
 		/// <value>The lifecycle steps.</value>
-		[DebuggerDisplay("Count = {(lifecycle.commission != null ? lifecycle.commission.Count : 0) + (lifecycle.decommission != null ? lifecycle.decommission.Count : 0)}"
+		[DebuggerDisplay(
+			"Count = {(lifecycle.commission != null ? lifecycle.commission.Count : 0) + (lifecycle.decommission != null ? lifecycle.decommission.Count : 0)}"
 			)]
 		public LifecycleConcernsCollection Lifecycle
 		{
@@ -283,7 +284,7 @@ namespace Castle.Core
 		/// </summary>
 		public string Name
 		{
-			get { return componentName != null ? componentName.Name : null; }
+			get { return componentName.Name; }
 			set { componentName.SetName(value); }
 		}
 
@@ -346,6 +347,30 @@ namespace Castle.Core
 			get { return parameters; }
 		}
 
+		/// <summary>
+		///   Adds constructor dependency to this <see cref = "ComponentModel" />
+		/// </summary>
+		/// <param name = "constructor"></param>
+		public void AddConstructor(ConstructorCandidate constructor)
+		{
+			Constructors.Add(constructor);
+			constructor.Dependencies.ForEach(Dependencies.Add);
+		}
+
+		/// <summary>
+		///   Adds property dependency to this <see cref = "ComponentModel" />
+		/// </summary>
+		/// <param name = "property"></param>
+		public void AddProperty(PropertySet property)
+		{
+			Properties.Add(property);
+			Dependencies.Add(property.Dependency);
+		}
+
+		/// <summary>
+		///   Add service to be exposed by this <see cref = "ComponentModel" />
+		/// </summary>
+		/// <param name = "type"></param>
 		public void AddService(Type type)
 		{
 			if (type == null)
@@ -364,13 +389,9 @@ namespace Castle.Core
 		{
 			foreach (var property in Properties)
 			{
-				foreach (var select in selectors)
+				if (selectors.Any(s => s(property)))
 				{
-					if (select(property))
-					{
-						property.Dependency.IsOptional = false;
-						break;
-					}
+					property.Dependency.IsOptional = false;
 				}
 			}
 		}

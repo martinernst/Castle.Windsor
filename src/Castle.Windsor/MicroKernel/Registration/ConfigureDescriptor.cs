@@ -1,4 +1,4 @@
-﻿// Copyright 2004-2009 Castle Project - http://www.castleproject.org/
+﻿// Copyright 2004-2011 Castle Project - http://www.castleproject.org/
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ namespace Castle.MicroKernel.Registration
 	using System;
 
 	/// <summary>
-	/// Describes a configuration.
+	///   Describes a configuration.
 	/// </summary>
 	public class ConfigureDescriptor
 	{
@@ -26,24 +26,24 @@ namespace Castle.MicroKernel.Registration
 		private readonly Action<ComponentRegistration> configurer;
 
 		/// <summary>
-		///  Initializes a new instance of the ConfigureDescriptor.
+		///   Initializes a new instance of the ConfigureDescriptor.
 		/// </summary>
-		/// <param name="basedOn">The <see cref="BasedOnDescriptor"/></param>
-		/// <param name="configurer">The configuration action.</param>
-		public ConfigureDescriptor(BasedOnDescriptor basedOn, 
-								   Action<ComponentRegistration> configurer)
+		/// <param name = "basedOn">The <see cref = "BasedOnDescriptor" /></param>
+		/// <param name = "configurer">The configuration action.</param>
+		public ConfigureDescriptor(BasedOnDescriptor basedOn,
+		                           Action<ComponentRegistration> configurer)
 			: this(basedOn, null, configurer)
 		{
 		}
 
-		/// <summary>
+		///<summary>
 		///  Initializes a new instance of the ConfigureDescriptor.
-		/// </summary>
-		/// <param name="basedOn">The <see cref="BasedOnDescriptor"/></param>
-		///	<param name="baseType">The base type to match.</param>
-		/// <param name="configurer">The configuration action.</param>
+		///</summary>
+		///<param name = "basedOn">The <see cref = "BasedOnDescriptor" /></param>
+		///<param name = "baseType">The base type to match.</param>
+		///<param name = "configurer">The configuration action.</param>
 		public ConfigureDescriptor(BasedOnDescriptor basedOn, Type baseType,
-								   Action<ComponentRegistration> configurer)
+		                           Action<ComponentRegistration> configurer)
 		{
 			this.basedOn = basedOn;
 			this.baseType = baseType;
@@ -51,9 +51,21 @@ namespace Castle.MicroKernel.Registration
 		}
 
 		/// <summary>
-		/// Allows customized configurations of each matching type.
+		///   Performs the component configuration.
 		/// </summary>
-		/// <param name="configurer">The configuration action.</param>
+		/// <param name = "registration">The component registration.</param>
+		public virtual void Apply(ComponentRegistration registration)
+		{
+			if (baseType == null || baseType.IsAssignableFrom(registration.Implementation))
+			{
+				configurer(registration);
+			}
+		}
+
+		/// <summary>
+		///   Allows customized configurations of each matching type.
+		/// </summary>
+		/// <param name = "configurer">The configuration action.</param>
 		/// <returns></returns>
 		public BasedOnDescriptor Configure(Action<ComponentRegistration> configurer)
 		{
@@ -61,49 +73,15 @@ namespace Castle.MicroKernel.Registration
 		}
 
 		/// <summary>
-		/// Allows customized configurations of each matching type.
+		///   Allows customized configurations of each matching type that is 
+		///   assignable to <typeparamref name = "T" />.
 		/// </summary>
-		/// <param name="configurer">The configuration action.</param>
-		/// <returns></returns>
-		public BasedOnDescriptor Configure(ConfigureDelegate configurer)
-		{
-			return basedOn.Configure(configurer);
-		}
-
-		/// <summary>
-		/// Allows customized configurations of each matching type that is 
-		/// assignable to <typeparamref name="T"/>.
-		/// </summary>
-		/// <typeparam name="T">The type assignable from.</typeparam>
-		/// <param name="configurer">The configuration action.</param>
+		/// <typeparam name = "T">The type assignable from.</typeparam>
+		/// <param name = "configurer">The configuration action.</param>
 		/// <returns></returns>
 		public BasedOnDescriptor ConfigureFor<T>(Action<ComponentRegistration> configurer)
 		{
 			return basedOn.ConfigureFor<T>(configurer);
-		}
-
-		/// <summary>
-		/// Allows customized configurations of each matching type that is 
-		/// assignable to <typeparamref name="T"/>.
-		/// </summary>
-		/// <typeparam name="T">The type assignable from.</typeparam>
-		/// <param name="configurer">The configuration action.</param>
-		/// <returns></returns>
-		public BasedOnDescriptor ConfigureFor<T>(ConfigureDelegate configurer)
-		{
-			return basedOn.ConfigureFor<T>(configurer);
-		}
-
-		/// <summary>
-		/// Performs the component configuration.
-		/// </summary>
-		/// <param name="registration">The component registration.</param>
-		public virtual void Apply(ComponentRegistration registration)
-		{
-			if (baseType == null || baseType.IsAssignableFrom(registration.Implementation))
-			{
-				configurer(registration);
-			}
 		}
 	}
 }

@@ -17,7 +17,6 @@ namespace Castle.MicroKernel
 	using System;
 	using System.Collections;
 	using System.Collections.Generic;
-	using System.ComponentModel;
 	using System.Diagnostics;
 	using System.Linq;
 	using System.Runtime.Serialization;
@@ -37,9 +36,7 @@ namespace Castle.MicroKernel
 	using Castle.MicroKernel.SubSystems.Conversion;
 	using Castle.MicroKernel.SubSystems.Naming;
 	using Castle.MicroKernel.SubSystems.Resource;
-#if !SILVERLIGHT
-	using Castle.Windsor.Experimental.Diagnostics;
-#endif
+	using Castle.Windsor.Diagnostics;
 
 	/// <summary>
 	///   Default implementation of <see cref = "IKernel" />. 
@@ -49,7 +46,7 @@ namespace Castle.MicroKernel
 	[Serializable]
 #if !SILVERLIGHT
 	[DebuggerTypeProxy(typeof(KernelDebuggerProxy))]
-	public partial class DefaultKernel : MarshalByRefObject, IKernel, IKernelEvents, IKernelInternal, IKernelEventsInternal
+	public partial class DefaultKernel : MarshalByRefObject, IKernel, IKernelEvents, IKernelInternal
 #else
 	public partial class DefaultKernel : IKernel, IKernelEvents, IKernelInternal, IKernelEventsInternal
 #endif
@@ -85,24 +82,12 @@ namespace Castle.MicroKernel
 		/// <summary>
 		///   Map of subsystems registered.
 		/// </summary>
-		private readonly Dictionary<string, ISubSystem> subsystems =
-			new Dictionary<string, ISubSystem>(StringComparer.OrdinalIgnoreCase);
+		private readonly Dictionary<string, ISubSystem> subsystems = new Dictionary<string, ISubSystem>(StringComparer.OrdinalIgnoreCase);
 
 		/// <summary>
 		///   The parent kernel, if exists.
 		/// </summary>
 		private IKernel parentKernel;
-
-		/// <summary>
-		///   Holds the implementation of <see cref = "IProxyFactory" />
-		/// </summary>
-		private IProxyFactory proxyFactory;
-
-		/// <summary>
-		///   Implements a policy to control component's
-		///   disposal that the user forgot.
-		/// </summary>
-		private IReleasePolicy releasePolicy;
 
 		private readonly object lazyLoadingLock = new object();
 
@@ -123,11 +108,10 @@ namespace Castle.MicroKernel
 		public DefaultKernel(IDependencyResolver resolver, IProxyFactory proxyFactory)
 		{
 			RegisterSubSystems();
-
-			releasePolicy = new LifecycledComponentsReleasePolicy();
+			ReleasePolicy = new LifecycledComponentsReleasePolicy(this);
 			handlerFactory = new DefaultHandlerFactory(this);
-			ComponentModelFactory = new DefaultComponentModelFactory(this);
-			this.proxyFactory = proxyFactory;
+			ComponentModelBuilder = new DefaultComponentModelBuilder(this);
+			ProxyFactory = proxyFactory;
 			this.resolver = resolver;
 			resolver.Initialize(this, RaiseDependencyResolving);
 		}
@@ -156,7 +140,7 @@ namespace Castle.MicroKernel
 		}
 #endif
 
-		public IComponentModelFactory ComponentModelFactory { get; set; }
+		public IComponentModelBuilder ComponentModelBuilder { get; set; }
 
 		public virtual IConfigurationStore ConfigurationStore
 		{
@@ -220,17 +204,9 @@ namespace Castle.MicroKernel
 			}
 		}
 
-		public IProxyFactory ProxyFactory
-		{
-			get { return proxyFactory; }
-			set { proxyFactory = value; }
-		}
+		public IProxyFactory ProxyFactory { get; set; }
 
-		public virtual IReleasePolicy ReleasePolicy
-		{
-			get { return releasePolicy; }
-			set { releasePolicy = value; }
-		}
+		public IReleasePolicy ReleasePolicy { get; set; }
 
 		public IDependencyResolver Resolver
 		{
@@ -291,8 +267,7 @@ namespace Castle.MicroKernel
 			childKernels.Add(childKernel);
 		}
 
-		// NOTE: this is from IKernelInternal
-		public virtual void AddCustomComponent(ComponentModel model)
+		public virtual IHandler AddCustomComponent(ComponentModel model, bool isMetaHandler)
 		{
 			if (model == null)
 			{
@@ -300,25 +275,13 @@ namespace Castle.MicroKernel
 			}
 
 			RaiseComponentModelCreated(model);
-			var handler = HandlerFactory.Create(model);
-
-			var skipRegistration = model.ExtendedProperties[ComponentModel.SkipRegistration];
-
-			if (skipRegistration != null)
-			{
-				RegisterHandler(model.Name, handler, (bool)skipRegistration);
-			}
-			else
-			{
-				RegisterHandler(model.Name, handler);
-			}
+			return HandlerFactory.Create(model, isMetaHandler);
 		}
 
-		[Obsolete("Use AddFacility(IFacility) instead.")]
-		[EditorBrowsable(EditorBrowsableState.Never)]
-		public virtual IKernel AddFacility(String key, IFacility facility)
+		// NOTE: this is from IKernelInternal
+		public IHandler AddCustomComponent(ComponentModel model)
 		{
-			return AddFacility(facility);
+			return AddCustomComponent(model, false);
 		}
 
 		public virtual IKernel AddFacility(IFacility facility)
@@ -338,21 +301,6 @@ namespace Castle.MicroKernel
 			facility.Init(this, ConfigurationStore.GetFacilityConfiguration(facilityType.FullName));
 
 			return this;
-		}
-
-		[Obsolete("Use AddFacility<TFacility>() instead.")]
-		[EditorBrowsable(EditorBrowsableState.Never)]
-		public IKernel AddFacility<T>(String key) where T : IFacility, new()
-		{
-			return AddFacility(new T());
-		}
-
-		[Obsolete("Use AddFacility<TFacility>(Action<TFacility>) instead.")]
-		[EditorBrowsable(EditorBrowsableState.Never)]
-		public IKernel AddFacility<T>(String key, Action<T> onCreate)
-			where T : IFacility, new()
-		{
-			return AddFacility(onCreate);
 		}
 
 		public IKernel AddFacility<T>() where T : IFacility, new()
@@ -482,24 +430,6 @@ namespace Castle.MicroKernel
 		{
 			var result = NamingSubSystem.GetHandlers(service);
 
-			// a complete generic type, Foo<Bar>, need to check if Foo<T> is registered
-			if (service.IsGenericType && !service.IsGenericTypeDefinition)
-			{
-				var genericResult = NamingSubSystem.GetHandlers(service.GetGenericTypeDefinition());
-
-				if (result.Length > 0)
-				{
-					var mergedResult = new IHandler[result.Length + genericResult.Length];
-					result.CopyTo(mergedResult, 0);
-					genericResult.CopyTo(mergedResult, result.Length);
-					result = mergedResult;
-				}
-				else
-				{
-					result = genericResult;
-				}
-			}
-
 			// If a parent kernel exists, we merge both results
 			if (Parent != null)
 			{
@@ -570,11 +500,24 @@ namespace Castle.MicroKernel
 		}
 
 		/// <summary>
-		///   Registers the components described by the <see cref = "ComponentRegistration{S}" />s
-		///   with the <see cref = "IKernel" />.
-		///   <param name = "registrations">The component registrations.</param>
-		///   <returns>The kernel.</returns>
+		///   Registers the components with the <see cref = "IKernel" />. The instances of <see cref = "IRegistration" /> are produced by fluent registration API.
+		///   Most common entry points are <see cref = "Component.For{TService}" /> method to register a single type or (recommended in most cases) 
+		///   <see cref = "AllTypes.FromThisAssembly" />.
+		///   Let the Intellisense drive you through the fluent API past those entry points. For details see the documentation at http://j.mp/WindsorApi
 		/// </summary>
+		/// <example>
+		///   <code>
+		///     kernel.Register(Component.For&lt;IService&gt;().ImplementedBy&lt;DefaultService&gt;().LifestyleTransient());
+		///   </code>
+		/// </example>
+		/// <example>
+		///   <code>
+		///     kernel.Register(Classes.FromThisAssembly().BasedOn&lt;IService&gt;().WithServiceDefaultInterfaces().Configure(c => c.LifestyleTransient()));
+		///   </code>
+		/// </example>
+		/// <param name = "registrations">The component registrations created by <see cref = "Component.For{TService}" />, <see
+		///    cref = "AllTypes.FromThisAssembly" /> or different entry method to the fluent API.</param>
+		/// <returns>The kernel.</returns>
 		public IKernel Register(params IRegistration[] registrations)
 		{
 			if (registrations == null)
@@ -688,10 +631,10 @@ namespace Castle.MicroKernel
 
 		protected void RegisterHandler(String key, IHandler handler)
 		{
-			RegisterHandler(key, handler, false);
+			(this as IKernelInternal).RegisterHandler(key, handler, false);
 		}
 
-		protected void RegisterHandler(String key, IHandler handler, bool skipRegistration)
+		void IKernelInternal.RegisterHandler(String key, IHandler handler, bool skipRegistration)
 		{
 			if (!skipRegistration)
 			{
@@ -716,13 +659,8 @@ namespace Castle.MicroKernel
 
 			AddSubSystem(SubSystemConstants.ResourceKey,
 			             new DefaultResourceSubSystem());
-#if !SILVERLIGHT
-			if (Debugger.IsAttached)
-			{
-				AddSubSystem(SubSystemConstants.DebuggingKey,
-				             new DefaultDebuggingSubSystem());
-			}
-#endif
+			AddSubSystem(SubSystemConstants.DiagnosticsKey,
+			             new DefaultDiagnosticsSubSystem());
 		}
 
 		protected object ResolveComponent(IHandler handler, Type service, IDictionary additionalArguments, IReleasePolicy policy)
@@ -743,26 +681,6 @@ namespace Castle.MicroKernel
 					throw new CircularDependencyException(message);
 				}
 				return handler.Resolve(context);
-			}
-			finally
-			{
-				currentCreationContext = parent;
-			}
-		}
-
-		protected object TryResolveComponent(IHandler handler, Type service, IDictionary additionalArguments, IReleasePolicy policy)
-		{
-			var parent = currentCreationContext;
-			var context = CreateCreationContext(handler, service, additionalArguments, parent, policy);
-			currentCreationContext = context;
-
-			try
-			{
-				if (handler.IsBeingResolvedInContext(context))
-				{
-					return null;
-				}
-				return handler.TryResolve(context);
 			}
 			finally
 			{

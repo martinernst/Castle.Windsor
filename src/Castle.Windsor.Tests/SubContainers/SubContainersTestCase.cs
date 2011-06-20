@@ -1,4 +1,4 @@
-// Copyright 2004-2010 Castle Project - http://www.castleproject.org/
+// Copyright 2004-2011 Castle Project - http://www.castleproject.org/
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,12 +20,13 @@ namespace Castle.MicroKernel.Tests.SubContainers
 	using Castle.Core;
 	using Castle.MicroKernel.Registration;
 	using Castle.MicroKernel.Tests.ClassComponents;
-	using Castle.Windsor.Tests.Components;
+
+	using CastleTests.Components;
 
 	using NUnit.Framework;
 
 	/// <summary>
-	/// Summary description for SubContainersTestCase.
+	///   Summary description for SubContainersTestCase.
 	/// </summary>
 	[TestFixture]
 	public class SubContainersTestCase
@@ -45,16 +46,16 @@ namespace Castle.MicroKernel.Tests.SubContainers
 		private IKernel kernel;
 
 		/// <summary>
-		/// collects events in an array list, used for ensuring we are cleaning up the parent kernel
-		/// event subscriptions correctly.
+		///   collects events in an array list, used for ensuring we are cleaning up the parent kernel
+		///   event subscriptions correctly.
 		/// </summary>
 		private class EventsCollector
 		{
 			public const string Added = "added";
 			public const string Removed = "removed";
 
-			private List<string> events;
-			private object expectedSender;
+			private readonly List<string> events;
+			private readonly object expectedSender;
 
 			public EventsCollector(object expectedSender)
 			{

@@ -17,9 +17,9 @@ namespace Castle
 	using Castle.MicroKernel.Registration;
 	using Castle.MicroKernel.Resolvers.SpecializedResolvers;
 	using Castle.Windsor.Tests;
-	using Castle.Windsor.Tests.Components;
 
 	using CastleTests;
+	using CastleTests.Components;
 
 	using NUnit.Framework;
 
@@ -37,7 +37,7 @@ namespace Castle
 				AllTypes.FromThisAssembly()
 					.BasedOn<IEmptyService2>()
 					.WithService.Base()
-					.Configure(c => c.LifeStyle.Transient));
+					.Configure(c => c.LifestyleTransient()));
 
 			var obj = Container.Resolve<IEmptyService2>();
 			Assert.IsInstanceOf<CompositeEmptyService2>(obj);

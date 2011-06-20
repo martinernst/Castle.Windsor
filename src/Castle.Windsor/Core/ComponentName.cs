@@ -14,11 +14,13 @@
 
 namespace Castle.Core
 {
+	using Castle.Core.Internal;
+
 	public class ComponentName
 	{
 		public ComponentName(string name, bool setByUser)
 		{
-			Name = name;
+			Name = Must.NotBeEmpty(name, "name");
 			SetByUser = setByUser;
 		}
 
@@ -32,7 +34,7 @@ namespace Castle.Core
 
 		internal void SetName(string value)
 		{
-			Name = value;
+			Name = Must.NotBeEmpty(value, "value");
 			SetByUser = true;
 		}
 	}

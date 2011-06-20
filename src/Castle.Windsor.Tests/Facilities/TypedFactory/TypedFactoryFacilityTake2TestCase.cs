@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-namespace Castle.Windsor.Tests.Facilities.TypedFactory
+namespace CastleTests.Facilities.TypedFactory
 {
 	using System;
 	using System.Linq;
@@ -26,19 +26,18 @@ namespace Castle.Windsor.Tests.Facilities.TypedFactory
 	using Castle.Windsor.Tests.Facilities.TypedFactory.Factories;
 	using Castle.Windsor.Tests.Facilities.TypedFactory.Selectors;
 
-	using CastleTests;
+	using CastleTests.Components;
+	using CastleTests.Interceptors;
 
 	using NUnit.Framework;
 
 	[TestFixture]
 	public class TypedFactoryFacilityTake2TestCase : AbstractContainerTestCase
 	{
-		protected override WindsorContainer BuildContainer()
+		protected override void AfterContainerCreated()
 		{
-			var windsorContainer = new WindsorContainer();
-			windsorContainer.AddFacility<TypedFactoryFacility>();
-			windsorContainer.Register(Component.For<IDummyComponent>().ImplementedBy<Component1>().LifeStyle.Transient);
-			return windsorContainer;
+			Container.AddFacility<TypedFactoryFacility>();
+			Container.Register(Component.For<IDummyComponent>().ImplementedBy<Component1>().LifestyleTransient());
 		}
 
 		[Test]
@@ -46,7 +45,7 @@ namespace Castle.Windsor.Tests.Facilities.TypedFactory
 		{
 			Container.Register(AllTypes.FromAssemblyContaining<TypedFactoryFacilityTake2TestCase>()
 			                   	.BasedOn(typeof(GenericComponent<>))
-			                   	.WithService.Base().Configure(c => c.LifeStyle.Transient),
+			                   	.WithService.Base().Configure(c => c.LifestyleTransient()),
 			                   Component.For<IObjectFactory>().AsFactory(s => s.SelectedWith<SelectorByClosedArgumentType>()),
 			                   Component.For<SelectorByClosedArgumentType>());
 
@@ -212,8 +211,8 @@ namespace Castle.Windsor.Tests.Facilities.TypedFactory
 		{
 			Container.Register(
 				Component.For<IGenericComponentsFactory>().AsFactory(),
-				Component.For(typeof(GenericComponentWithIntArg<>)).LifeStyle.Singleton,
-				Component.For(typeof(GenericComponent<>)).LifeStyle.Singleton);
+				Component.For(typeof(GenericComponentWithIntArg<>)).LifestyleSingleton(),
+				Component.For(typeof(GenericComponent<>)).LifestyleSingleton());
 
 			var factory = Container.Resolve<IGenericComponentsFactory>();
 
@@ -233,17 +232,6 @@ namespace Castle.Windsor.Tests.Facilities.TypedFactory
 			var factory = Container.Resolve<IGenericComponentsFactory>();
 			var component = factory.CreateGeneric<IDummyComponent>();
 			Assert.IsInstanceOf<Component1>(component);
-		}
-
-		[Test]
-		public void Can_resolve_via_generic_factory()
-		{
-			Container.Register(Component.For(typeof(IGenericFactory<>)).AsFactory());
-
-			var factory = Container.Resolve<IGenericFactory<IDummyComponent>>();
-
-			var component = factory.Create();
-			Assert.IsNotNull(component);
 		}
 
 		[Test]
@@ -289,6 +277,23 @@ namespace Castle.Windsor.Tests.Facilities.TypedFactory
 
 			var factory = Container.Resolve<IGenericFactoryWithGenericMethod<A>>();
 			factory.Create<IDummyComponent<A>>();
+		}
+
+		[Test]
+		public void Can_use_additional_interceptors_on_interface_based_factory()
+		{
+			Container.Register(
+				Component.For<CollectInvocationsInterceptor>(),
+				Component.For<DummyComponentFactory>().Interceptors<CollectInvocationsInterceptor>().AsFactory());
+			var factory = Container.Resolve<DummyComponentFactory>();
+
+			var component = factory.CreateDummyComponent();
+			Assert.IsNotNull(component);
+
+			var interceptor = Container.Resolve<CollectInvocationsInterceptor>();
+
+			Assert.AreEqual(1, interceptor.Invocations.Count);
+			Assert.AreSame(component, interceptor.Invocations[0].ReturnValue);
 		}
 
 		[Test]
@@ -461,7 +466,7 @@ namespace Castle.Windsor.Tests.Facilities.TypedFactory
 			DisposableSelector.InstancesCreated = 0;
 			DisposableSelector.InstancesDisposed = 0;
 			Container.Register(
-				Component.For<DummyComponentFactory>().AsFactory(f => f.SelectedWith<DisposableSelector>()).LifeStyle.Transient,
+				Component.For<DummyComponentFactory>().AsFactory(f => f.SelectedWith<DisposableSelector>()).LifestyleTransient(),
 				Component.For<DisposableSelector>().LifeStyle.Transient);
 			var factory = Container.Resolve<DummyComponentFactory>();
 
@@ -495,6 +500,18 @@ namespace Castle.Windsor.Tests.Facilities.TypedFactory
 			var factory = Container.Resolve<InvalidDummyComponentListFactory>();
 
 			Assert.Throws<ComponentNotFoundException>(() => factory.All());
+		}
+
+		[Test]
+		public void Resolve_should_fail_hard_when_component_with_picked_name_not_present()
+		{
+			Container.Register(
+				Component.For<IDummyComponent>().ImplementedBy<Component2>().LifestyleTransient(),
+				Component.For<DummyComponentFactory>().AsFactory(f => f.SelectedWith<FooSelector>()),
+				Component.For<FooSelector>());
+			var factory = Container.Resolve<DummyComponentFactory>();
+
+			Assert.Throws<ComponentNotFoundException>(() => factory.CreateDummyComponent());
 		}
 
 		[Test]

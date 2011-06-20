@@ -1,4 +1,4 @@
-// Copyright 2004-2010 Castle Project - http://www.castleproject.org/
+// Copyright 2004-2011 Castle Project - http://www.castleproject.org/
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -37,11 +37,28 @@ namespace Castle.Core.Internal
 
 		private static readonly Lock @lock = Lock.Create();
 #endif
+
 		public static TBase CreateInstance<TBase>(this Type subtypeofTBase, params object[] ctorArgs)
 		{
 			EnsureIsAssignable<TBase>(subtypeofTBase);
 
 			return Instantiate<TBase>(subtypeofTBase, ctorArgs ?? new object[0]);
+		}
+
+		public static IEnumerable<Assembly> GetApplicationAssemblies(Assembly rootAssembly)
+		{
+			var index = rootAssembly.FullName.IndexOfAny(new[] { '.', ',' });
+			if (index < 0)
+			{
+				throw new ArgumentException(
+					string.Format("Could not determine application name for assembly \"{0}\". Please use a different method for obtaining assemblies.",
+					              rootAssembly.FullName));
+			}
+
+			var applicationName = rootAssembly.FullName.Substring(0, index);
+			var assemblies = new HashSet<Assembly>();
+			AddApplicationAssemblies(rootAssembly, assemblies, applicationName);
+			return assemblies;
 		}
 
 		public static IEnumerable<Assembly> GetAssemblies(IAssemblyProvider assemblyProvider)
@@ -97,7 +114,7 @@ namespace Castle.Core.Internal
 					}
 				}
 			}
-			var assembly = Assembly.Load(assemblyName);
+			var assembly = LoadAssembly(assemblyName);
 			if (assemblyFilter != null)
 			{
 				foreach (Predicate<Assembly> predicate in assemblyFilter.GetInvocationList())
@@ -111,19 +128,28 @@ namespace Castle.Core.Internal
 			return assembly;
 		}
 
+		private static Assembly LoadAssembly(AssemblyName assemblyName)
+		{
+			return Assembly.Load(assemblyName);
+		}
+
 		public static TAttribute[] GetAttributes<TAttribute>(this MemberInfo item) where TAttribute : Attribute
 		{
 			return (TAttribute[])Attribute.GetCustomAttributes(item, typeof(TAttribute), true);
 		}
 
 		/// <summary>
-		/// If the extended type is a Foo[] or IEnumerable{Foo} which is assignable from Foo[] this method will return typeof(Foo)
-		/// otherwise <c>null</c>.
+		///   If the extended type is a Foo[] or IEnumerable{Foo} which is assignable from Foo[] this method will return typeof(Foo)
+		///   otherwise <c>null</c>.
 		/// </summary>
-		/// <param name="type"></param>
+		/// <param name = "type"></param>
 		/// <returns></returns>
 		public static Type GetCompatibleArrayItemType(this Type type)
 		{
+			if (type == null)
+			{
+				return null;
+			}
 			if (type.IsArray)
 			{
 				return type.GetElementType();
@@ -134,8 +160,8 @@ namespace Castle.Core.Internal
 			}
 			var openGeneric = type.GetGenericTypeDefinition();
 			if (openGeneric == typeof(IList<>) ||
-				openGeneric == typeof(ICollection<>) ||
-				openGeneric == typeof(IEnumerable<>))
+			    openGeneric == typeof(ICollection<>) ||
+			    openGeneric == typeof(IEnumerable<>))
 			{
 				return type.GetGenericArguments()[0];
 			}
@@ -229,11 +255,7 @@ namespace Castle.Core.Internal
 		private static TBase Instantiate<TBase>(Type subtypeofTBase, object[] ctorArgs)
 		{
 			ctorArgs = ctorArgs ?? new object[0];
-#if SILVERLIGHT
-			var types = ctorArgs.Select(a => a == null ? typeof(object) : a.GetType()).ToArray();
-#else
-			var types = Array.ConvertAll(ctorArgs, a => a == null ? typeof(object) : a.GetType());
-#endif
+			var types = ctorArgs.ConvertAll(a => a == null ? typeof(object) : a.GetType());
 			var constructor = subtypeofTBase.GetConstructor(BindingFlags.Instance | BindingFlags.Public, null, types, null);
 			if (constructor != null)
 			{
@@ -301,6 +323,21 @@ namespace Castle.Core.Internal
 		private static bool IsExe(string extension)
 		{
 			return ".exe".Equals(extension, StringComparison.OrdinalIgnoreCase);
+		}
+
+		private static void AddApplicationAssemblies(Assembly assembly, HashSet<Assembly> assemblies, string applicationName)
+		{
+			if (assemblies.Add(assembly) == false)
+			{
+				return;
+			}
+			foreach (var referencedAssembly in assembly.GetReferencedAssemblies())
+			{
+				if (referencedAssembly.FullName.StartsWith(applicationName))
+				{
+					AddApplicationAssemblies(LoadAssembly(referencedAssembly), assemblies, applicationName);
+				}
+			}
 		}
 	}
 }

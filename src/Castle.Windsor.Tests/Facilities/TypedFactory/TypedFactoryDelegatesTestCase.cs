@@ -12,35 +12,81 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-namespace Castle.Windsor.Tests.Facilities.TypedFactory
+namespace CastleTests.Facilities.TypedFactory
 {
 	using System;
+	using System.Linq;
 
 	using Castle.Facilities.TypedFactory;
 	using Castle.MicroKernel;
 	using Castle.MicroKernel.Registration;
 	using Castle.MicroKernel.Releasers;
 	using Castle.MicroKernel.Tests.ClassComponents;
-	using Castle.Windsor.Tests.ClassComponents;
+	using Castle.Windsor.Tests.Facilities.TypedFactory;
 	using Castle.Windsor.Tests.Facilities.TypedFactory.Components;
 	using Castle.Windsor.Tests.Facilities.TypedFactory.Delegates;
 	using Castle.Windsor.Tests.Facilities.TypedFactory.Factories;
 	using Castle.Windsor.Tests.Facilities.TypedFactory.Selectors;
 
-	using CastleTests;
+	using CastleTests.Components;
+	using CastleTests.Facilities.TypedFactory.Delegates;
+	using CastleTests.Interceptors;
 
 	using NUnit.Framework;
 
 	using HasTwoConstructors = Castle.Windsor.Tests.Facilities.TypedFactory.Delegates.HasTwoConstructors;
+	using ServiceFactory = Castle.Windsor.Tests.Facilities.TypedFactory.ServiceFactory;
 
 	[TestFixture]
 	public class TypedFactoryDelegatesTestCase : AbstractContainerTestCase
 	{
-		protected override WindsorContainer BuildContainer()
+		protected override void AfterContainerCreated()
 		{
-			var windsor = new WindsorContainer();
-			windsor.AddFacility<TypedFactoryFacility>();
-			return windsor;
+			Container.AddFacility<TypedFactoryFacility>();
+		}
+
+		[Test]
+		public void Can_register_generic_delegate_factory_explicitly_as_open_generic_optional_dependency()
+		{
+			Container.Register(Component.For<Foo>().LifeStyle.Transient,
+			                   Component.For<Bar>().LifeStyle.Transient,
+			                   Component.For<UsesFooAndBarDelegateProperties>(),
+			                   Component.For(typeof(Func<>)).AsFactory());
+
+			var instance = Container.Resolve<UsesFooAndBarDelegateProperties>();
+
+			Assert.IsNotNull(instance.FooFactory);
+			Assert.IsNotNull(instance.BarFactory);
+
+			var factoryHandler = Kernel.GetHandler(typeof(Func<>));
+			Assert.IsNotNull(factoryHandler);
+
+			var allhandlers = Kernel.GetAssignableHandlers(typeof(object));
+
+			Assert.IsFalse(allhandlers.SelectMany(h => h.ComponentModel.Services).Any(s => s == typeof(Func<Foo>)));
+			Assert.IsFalse(allhandlers.SelectMany(h => h.ComponentModel.Services).Any(s => s == typeof(Func<Bar>)));
+		}
+
+		[Test]
+		public void Can_register_generic_delegate_factory_explicitly_as_open_generic_required_dependency()
+		{
+			Container.Register(Component.For<Foo>().LifeStyle.Transient,
+			                   Component.For<Bar>().LifeStyle.Transient,
+			                   Component.For<UsesFooAndBarDelegateCtor>(),
+			                   Component.For(typeof(Func<>)).AsFactory());
+
+			var instance = Container.Resolve<UsesFooAndBarDelegateCtor>();
+
+			Assert.IsNotNull(instance.FooFactory);
+			Assert.IsNotNull(instance.BarFactory);
+
+			var factoryHandler = Kernel.GetHandler(typeof(Func<>));
+			Assert.IsNotNull(factoryHandler);
+
+			var allhandlers = Kernel.GetAssignableHandlers(typeof(object));
+
+			Assert.IsFalse(allhandlers.SelectMany(h => h.ComponentModel.Services).Any(s => s == typeof(Func<Foo>)));
+			Assert.IsFalse(allhandlers.SelectMany(h => h.ComponentModel.Services).Any(s => s == typeof(Func<Bar>)));
 		}
 
 		[Test]
@@ -128,6 +174,24 @@ namespace Castle.Windsor.Tests.Facilities.TypedFactory
 		}
 
 		[Test]
+		public void Can_use_additional_interceptors_on_delegate_based_factory()
+		{
+			Container.Register(
+				Component.For<CollectInvocationsInterceptor>(),
+				Component.For<IDummyComponent>().ImplementedBy<Component1>(),
+				Component.For<Func<IDummyComponent>>().Interceptors<CollectInvocationsInterceptor>().AsFactory());
+			var factory = Container.Resolve<Func<IDummyComponent>>();
+
+			var component = factory();
+			Assert.IsNotNull(component);
+
+			var interceptor = Container.Resolve<CollectInvocationsInterceptor>();
+
+			Assert.AreEqual(1, interceptor.Invocations.Count);
+			Assert.AreSame(component, interceptor.Invocations[0].ReturnValue);
+		}
+
+		[Test]
 		[Ignore("Not supported for Func delegates")]
 		public void Does_not_duplicate_arguments_matching_delegate_parameters()
 		{
@@ -203,7 +267,7 @@ namespace Castle.Windsor.Tests.Facilities.TypedFactory
 		[Test]
 		public void Factory_does_not_referece_components_after_theyve_been_released()
 		{
-			DisposableFoo.DisposedCount = 0;
+			DisposableFoo.ResetDisposedCount();
 
 			Container.Register(Component.For<DisposableFoo>().LifeStyle.Transient,
 			                   Component.For<UsesDisposableFooDelegate>().LifeStyle.Transient);
@@ -356,9 +420,41 @@ namespace Castle.Windsor.Tests.Facilities.TypedFactory
 		}
 
 		[Test]
+		public void Registers_generic_delegate_factories_as_open_generics_optional_dependency()
+		{
+			Container.Register(Component.For<Foo>().LifeStyle.Transient,
+			                   Component.For<Bar>().LifeStyle.Transient,
+			                   Component.For<UsesFooAndBarDelegateProperties>());
+
+			var instance = Container.Resolve<UsesFooAndBarDelegateProperties>();
+
+			Assert.IsNotNull(instance.FooFactory);
+			Assert.IsNotNull(instance.BarFactory);
+
+			var factoryHandler = Kernel.GetHandler(typeof(Func<>));
+			Assert.IsNotNull(factoryHandler);
+		}
+
+		[Test]
+		public void Registers_generic_delegate_factories_as_open_generics_required_dependency()
+		{
+			Container.Register(Component.For<Foo>().LifeStyle.Transient,
+			                   Component.For<Bar>().LifeStyle.Transient,
+			                   Component.For<UsesFooAndBarDelegateCtor>());
+
+			var instance = Container.Resolve<UsesFooAndBarDelegateCtor>();
+
+			Assert.IsNotNull(instance.FooFactory);
+			Assert.IsNotNull(instance.BarFactory);
+
+			var factoryHandler = Kernel.GetHandler(typeof(Func<>));
+			Assert.IsNotNull(factoryHandler);
+		}
+
+		[Test]
 		public void Releasing_component_depending_on_a_factory_releases_what_was_pulled_from_it()
 		{
-			DisposableFoo.DisposedCount = 0;
+			DisposableFoo.ResetDisposedCount();
 
 			Container.Register(Component.For<DisposableFoo>().LifeStyle.Transient,
 			                   Component.For<UsesDisposableFooDelegate>().LifeStyle.Transient);

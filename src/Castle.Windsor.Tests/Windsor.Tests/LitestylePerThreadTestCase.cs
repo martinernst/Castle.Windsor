@@ -21,6 +21,7 @@ namespace Castle.Windsor.Tests
 	using Castle.Windsor.Tests.ClassComponents;
 
 	using CastleTests;
+	using CastleTests.Components;
 
 	using NUnit.Framework;
 
@@ -41,7 +42,7 @@ namespace Castle.Windsor.Tests
 		[Test]
 		public void Disposable_components_are_decommissioned_on_container_Dispose()
 		{
-			Container.Register(Component.For<DisposableComponent>().LifeStyle.PerThread);
+			Container.Register(Component.For<DisposableComponent>().LifestylePerThread());
 			var a = Container.Resolve<DisposableComponent>();
 			Container.Dispose();
 			Assert.IsTrue(a.Disposed);

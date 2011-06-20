@@ -1,4 +1,4 @@
-// Copyright 2004-2009 Castle Project - http://www.castleproject.org/
+// Copyright 2004-2011 Castle Project - http://www.castleproject.org/
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,33 +15,51 @@
 namespace Castle.Core
 {
 	using System;
-	using System.Collections.ObjectModel;
+	using System.Collections;
+	using System.Collections.Generic;
+	using System.Linq;
 	using System.Reflection;
 
 	/// <summary>
-	/// Collection of <see cref="PropertySet"/>
+	///   Collection of <see cref = "PropertySet" />
 	/// </summary>
-#if !SILVERLIGHT
 	[Serializable]
-#endif
-	public class PropertySetCollection : Collection<PropertySet>
+	public class PropertySetCollection : IEnumerable<PropertySet>
 	{
+		private readonly HashSet<PropertySet> properties = new HashSet<PropertySet>();
+
+		public int Count
+		{
+			get { return properties.Count; }
+		}
+
 		/// <summary>
-		/// Finds a PropertySet the by PropertyInfo.
+		///   Finds a PropertySet the by PropertyInfo.
 		/// </summary>
-		/// <param name="info">The info.</param>
+		/// <param name = "info">The info.</param>
 		/// <returns></returns>
 		public PropertySet FindByPropertyInfo(PropertyInfo info)
 		{
-			foreach(PropertySet prop in this)
-			{
-				if (info == prop.Property)
-				{
-					return prop;
-				}
-			}
+			return this.FirstOrDefault(prop => info == prop.Property);
+		}
 
-			return null;
+		public IEnumerator<PropertySet> GetEnumerator()
+		{
+			return properties.GetEnumerator();
+		}
+
+		internal void Add(PropertySet property)
+		{
+			if (property == null)
+			{
+				throw new ArgumentNullException("property");
+			}
+			properties.Add(property);
+		}
+
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return properties.GetEnumerator();
 		}
 	}
 }

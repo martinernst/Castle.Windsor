@@ -1,4 +1,4 @@
-// Copyright 2004-2010 Castle Project - http://www.castleproject.org/
+// Copyright 2004-2011 Castle Project - http://www.castleproject.org/
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -44,6 +44,11 @@ namespace Castle.MicroKernel.Lifestyle
 			get { return model; }
 		}
 
+		/// <summary>
+		/// Invoked when the container gets disposed. The container will not call it multiple times in multithreaded environments.
+		/// However it may be called at the same time when some out of band release mechanism is in progress. Resolving those potential
+		/// issues is the task of implementors
+		/// </summary>
 		public abstract void Dispose();
 
 		public virtual void Init(IComponentActivator componentActivator, IKernel kernel, ComponentModel model)
@@ -53,31 +58,30 @@ namespace Castle.MicroKernel.Lifestyle
 			this.model = model;
 		}
 
-		public virtual object Resolve(CreationContext context, IReleasePolicy releasePolicy)
-		{
-			var burden = CreateInstance(context, false);
-			Track(burden, releasePolicy);
-			return burden.Instance;
-
-		}
-
 		public virtual bool Release(object instance)
 		{
 			componentActivator.Destroy(instance);
 			return true;
 		}
 
-		protected virtual void Track(Burden burden, IReleasePolicy releasePolicy)
+		public virtual object Resolve(CreationContext context, IReleasePolicy releasePolicy)
 		{
-			if(burden.RequiresPolicyRelease)
-			{
-				releasePolicy.Track(burden.Instance, burden);
-			}
+			var burden = CreateInstance(context, false);
+			Track(burden, releasePolicy);
+			return burden.Instance;
 		}
 
 		protected virtual Burden CreateInstance(CreationContext context, bool trackedExternally)
 		{
 			return context.ActivateNewInstance(ComponentActivator, trackedExternally);
+		}
+
+		protected virtual void Track(Burden burden, IReleasePolicy releasePolicy)
+		{
+			if (burden.RequiresPolicyRelease)
+			{
+				releasePolicy.Track(burden.Instance, burden);
+			}
 		}
 	}
 }
